@@ -788,9 +788,11 @@ async function runTest(test: Test, runner: VitestRunner): Promise<void> {
 }
 
 function failTask(result: TaskResult, err: unknown, diffOptions: DiffOptions | undefined) {
-  if (err instanceof PendingError) {
+  // around hooks rethrow their errors as an array
+  const pendingError = Array.isArray(err) ? err.find((e) => e instanceof PendingError) : err
+  if (pendingError instanceof PendingError) {
     result.state = 'skip'
-    result.note = err.note
+    result.note = pendingError.note
     result.pending = true
     return
   }

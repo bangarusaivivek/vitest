@@ -745,6 +745,50 @@ test('aroundEach skipped when test is skipped', async () => {
   `)
 })
 
+test('skip() inside aroundEach keeps the note', async () => {
+  const { stderr, buildTree } = await runInlineTests({
+    'skip-note.test.ts': `
+      import { aroundEach, beforeEach, describe, test } from 'vitest'
+
+      describe('aroundEach', () => {
+        aroundEach(async (runTest, { skip }) => {
+          skip(true, 'reason from aroundEach')
+          await runTest()
+        })
+        test('skipped in aroundEach', () => {})
+      })
+
+      describe('beforeEach', () => {
+        beforeEach(({ skip }) => {
+          skip(true, 'reason from beforeEach')
+        })
+        test('skipped in beforeEach', () => {})
+      })
+    `,
+  })
+
+  expect(stderr).toBe('')
+  expect(buildTree((t) => ({ state: t.result().state, note: (t.result() as any).note })))
+    .toMatchInlineSnapshot(`
+    {
+      "skip-note.test.ts": {
+        "aroundEach": {
+          "skipped in aroundEach": {
+            "note": "reason from aroundEach",
+            "state": "skipped",
+          },
+        },
+        "beforeEach": {
+          "skipped in beforeEach": {
+            "note": "reason from beforeEach",
+            "state": "skipped",
+          },
+        },
+      },
+    }
+  `)
+})
+
 test('aroundEach setup phase timeout', async () => {
   const { stderr } = await runInlineTests({
     'setup-timeout.test.ts': `
